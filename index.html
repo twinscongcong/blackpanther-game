@@ -22,7 +22,6 @@ canvas {
   margin: auto;
 }
 
-/* 버튼 */
 #jumpBtn, #shootBtn {
   position: fixed;
   bottom: 20px;
@@ -36,7 +35,6 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  user-select: none;
   z-index: 10;
 }
 
@@ -55,9 +53,8 @@ canvas {
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let gameW = 0;
-let gameH = 0;
-let dpr = window.devicePixelRatio || 1;
+let gameW, gameH;
+const dpr = window.devicePixelRatio || 1;
 
 function resize(){
   const vw = window.innerWidth;
@@ -84,7 +81,7 @@ blockImg.src = "block.png";
 const bgImg = new Image();
 bgImg.src = "background.png";
 
-/* 사운드 */
+/* 오디오 */
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 const audioCtx = new AudioCtx();
 document.body.addEventListener("touchstart", ()=>{
@@ -102,61 +99,78 @@ function shootSound(){
 
 /* 게임 변수 */
 const gravity = 0.9;
-const groundY = ()=>gameH - 120;
+const groundY = () => gameH - 120;
 
 const player = {
   x: 80, y: 0, w: 80, h: 80,
   vy: 0, onGround: false
 };
 
-let bullets=[];
-let blocks=[];
-let hp=5;
-const maxHp=5;
+let bullets = [];
+let blocks = [];
+let hp = 5;
+const maxHp = 5;
 
 /* 버튼 */
-let jumpStart=0;
+let jumpStart = 0;
+
 jumpBtn.ontouchstart = e=>{
   e.preventDefault();
-  jumpStart=Date.now();
+  jumpStart = Date.now();
 };
 jumpBtn.ontouchend = e=>{
   e.preventDefault();
   if(player.onGround){
-    player.vy = (Date.now()-jumpStart<200)?-12:-18;
-    player.onGround=false;
+    player.vy = (Date.now()-jumpStart < 200) ? -12 : -18;
+    player.onGround = false;
   }
 };
 
 shootBtn.ontouchstart = e=>{
   e.preventDefault();
-  bullets.push({x:player.x+player.w,y:player.y+40,w:10,h:4});
+  bullets.push({
+    x: player.x + player.w,
+    y: player.y + player.h/2,
+    w: 12,
+    h: 6
+  });
   shootSound();
 };
 
 /* 블럭 생성 */
 setInterval(()=>{
-  const levels=[0,90,170];
-  const sizes=[90,70,60];
-  const i=Math.floor(Math.random()*3);
+  const heights = [0, 90, 170];
+  const sizes = [90, 70, 60];
+  const i = Math.floor(Math.random()*3);
+
   blocks.push({
     x: gameW,
-    y: groundY()-levels[i],
+    y: groundY() - heights[i],
     size: sizes[i]
   });
-},1500);
+}, 1500);
 
-function hit(a,b){
-  return a.x<b.x+b.size &&
-         a.x+a.w>b.x &&
-         a.y<b.y+b.size &&
-         a.y+a.h>b.y;
+/* 충돌 판정 (총알/블럭 분리) */
+function hitRect(a, b){
+  return a.x < b.x + b.w &&
+         a.x + a.w > b.x &&
+         a.y < b.y + b.h &&
+         a.y + a.h > b.y;
 }
 
+function hitBlock(a, b){
+  return a.x < b.x + b.size &&
+         a.x + a.w > b.x &&
+         a.y < b.y + b.size &&
+         a.y + a.h > b.y;
+}
+
+/* HP */
 function drawHP(){
+  const y = gameH - 30;
   for(let i=0;i<maxHp;i++){
     ctx.fillStyle = i<hp ? "red" : "#555";
-    ctx.fillRect(20 + i*26, 20, 20, 20);
+    ctx.fillRect(20 + i*26, y, 20, 20);
   }
 }
 
@@ -165,35 +179,35 @@ function update(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.drawImage(bgImg,0,0,gameW,gameH);
 
-  player.vy+=gravity;
-  player.y+=player.vy;
-  if(player.y>=groundY()){
-    player.y=groundY();
-    player.vy=0;
-    player.onGround=true;
+  player.vy += gravity;
+  player.y += player.vy;
+  if(player.y >= groundY()){
+    player.y = groundY();
+    player.vy = 0;
+    player.onGround = true;
   }
 
-  ctx.drawImage(pantherImg,player.x,player.y,player.w,player.h);
+  ctx.drawImage(pantherImg, player.x, player.y, player.w, player.h);
 
   for(let i=bullets.length-1;i>=0;i--){
-    const b=bullets[i];
-    b.x+=10;
-    ctx.fillRect(b.x,b.y,b.w,b.h);
-    if(b.x>gameW) bullets.splice(i,1);
+    const b = bullets[i];
+    b.x += 10;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    if(b.x > gameW) bullets.splice(i,1);
   }
 
   for(let i=blocks.length-1;i>=0;i--){
-    const bl=blocks[i];
-    bl.x-=4;
-    ctx.drawImage(blockImg,bl.x,bl.y,bl.size,bl.size);
+    const bl = blocks[i];
+    bl.x -= 4;
+    ctx.drawImage(blockImg, bl.x, bl.y, bl.size, bl.size);
 
-    if(hit(player,bl)){
+    if(hitBlock(player, bl)){
       blocks.splice(i,1);
       hp--;
     }
 
     for(let j=bullets.length-1;j>=0;j--){
-      if(hit(bullets[j],bl)){
+      if(hitBlock(bullets[j], bl)){
         bullets.splice(j,1);
         blocks.splice(i,1);
         break;
