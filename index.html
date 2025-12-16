@@ -19,17 +19,16 @@ canvas {
 }
 
 /* 가로 고정 */
-@media screen and (orientation: portrait) {
-  body {
-    transform: rotate(90deg);
-    transform-origin: center center;
-    width: 100vh;
-    height: 100vw;
-    position: absolute;
-    top: 0;
-    left: 0;
-  }
+function resize(){
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = window.innerWidth * ratio;
+  canvas.height = window.innerHeight * ratio;
+  canvas.style.width = window.innerWidth + "px";
+  canvas.style.height = window.innerHeight + "px";
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 }
+window.addEventListener("resize", resize);
+resize();
 
 /* 버튼 */
 #jumpBtn, #shootBtn {
@@ -307,3 +306,4 @@ update();
 </script>
 </body>
 </html>
+
