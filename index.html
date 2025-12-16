@@ -21,7 +21,8 @@ canvas {
   left: 0;
   z-index: 1;
 }
-  /* 버튼 */
+
+/* 버튼 */
 #jumpBtn, #shootBtn {
   position: fixed;
   bottom: 20px;
@@ -41,20 +42,6 @@ canvas {
 
 #jumpBtn { left: 20px; }
 #shootBtn { right: 20px; }
-
-/* 가로 고정 */
-function resize(){
-  const ratio = window.devicePixelRatio || 1;
-  canvas.width = window.innerWidth * ratio;
-  canvas.height = window.innerHeight * ratio;
-  canvas.style.width = window.innerWidth + "px";
-  canvas.style.height = window.innerHeight + "px";
-  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-}
-window.addEventListener("resize", resize);
-resize();
-
-
 </style>
 </head>
 
@@ -68,14 +55,14 @@ resize();
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+/* 👉 가로 풀스크린 (안 깨지는 방식) */
 function resize(){
-  if(innerWidth > innerHeight){
-    canvas.width = innerWidth;
-    canvas.height = innerHeight;
-  } else {
-    canvas.width = innerHeight;
-    canvas.height = innerWidth;
-  }
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = innerWidth * ratio;
+  canvas.height = innerHeight * ratio;
+  canvas.style.width = innerWidth + "px";
+  canvas.style.height = innerHeight + "px";
+  ctx.setTransform(ratio,0,0,ratio,0,0);
 }
 window.addEventListener("resize", resize);
 resize();
@@ -110,19 +97,6 @@ function hitSound(){
   o.start(); o.stop(audioCtx.currentTime+0.2);
 }
 
-/* 배경음 */
-const bgm = audioCtx.createOscillator();
-const bgmGain = audioCtx.createGain();
-bgm.frequency.value = 120;
-bgmGain.gain.value = 0.03;
-bgm.connect(bgmGain);
-bgmGain.connect(audioCtx.destination);
-bgm.start();
-
-document.body.addEventListener("touchstart", ()=>{
-  if(audioCtx.state==="suspended") audioCtx.resume();
-},{once:true});
-
 /* 게임 변수 */
 const gravity = 0.9;
 const groundY = ()=>canvas.height-120;
@@ -132,16 +106,12 @@ const player = {
   vy: 0, onGround: false
 };
 
-let bullets=[];
-let blocks=[];
-let particles=[];
-let score=0;
-let hp=5;
-const maxHp=5;
+let bullets=[], blocks=[], particles=[];
+let score=0, hp=5, maxHp=5;
 let best = localStorage.getItem("bestScore") || 0;
 let gameOver=false;
 
-/* 버튼 조작 */
+/* 버튼 */
 const jumpBtn = document.getElementById("jumpBtn");
 const shootBtn = document.getElementById("shootBtn");
 let jumpTime=0;
@@ -152,30 +122,19 @@ jumpBtn.addEventListener("touchstart",e=>{
 });
 jumpBtn.addEventListener("touchend",e=>{
   e.preventDefault();
-  jump(Date.now()-jumpTime);
+  if(player.onGround){
+    player.vy = (Date.now()-jumpTime)<200 ? -12 : -18;
+    player.onGround=false;
+  }
 });
 
 shootBtn.addEventListener("touchstart",e=>{
   e.preventDefault();
-  shoot();
+  bullets.push({x:player.x+player.w,y:player.y+40,w:10,h:4});
+  shootSound();
 });
 
-/* 동작 */
-function jump(t){
-  if(!player.onGround) return;
-  player.vy = t<200 ? -12 : -18;
-  player.onGround=false;
-}
-
-function shoot(){
-  bullets.push({
-    x: player.x+player.w,
-    y: player.y+40,
-    w: 10, h: 4
-  });
-  shootSound();
-}
-
+/* 블럭 */
 function spawnBlock(){
   const types=[
     {y:groundY(), s:90, c:"brown"},
@@ -183,65 +142,15 @@ function spawnBlock(){
     {y:groundY()-170, s:60, c:"purple"}
   ];
   const t=types[Math.floor(Math.random()*3)];
-  blocks.push({
-    x: canvas.width,
-    y: t.y,
-    size: t.s,
-    color: t.c
-  });
+  blocks.push({x:canvas.width,y:t.y,size:t.s,color:t.c});
 }
 setInterval(spawnBlock,1500);
 
-function explode(x,y,c){
-  for(let i=0;i<14;i++){
-    particles.push({
-      x,y,
-      vx:(Math.random()-0.5)*6,
-      vy:(Math.random()-0.5)*6,
-      life:30,
-      color:c
-    });
-  }
-  hitSound();
-}
-
 function hit(a,b){
-  return a.x < b.x+b.size &&
-         a.x+a.w > b.x &&
-         a.y < b.y+b.size &&
-         a.y+a.h > b.y;
-}
-
-function drawStar(x,y,r,c){
-  ctx.fillStyle=c;
-  ctx.beginPath();
-  for(let i=0;i<5;i++){
-    ctx.lineTo(
-      x+Math.cos((18+i*72)*Math.PI/180)*r,
-      y-Math.sin((18+i*72)*Math.PI/180)*r
-    );
-    ctx.lineTo(
-      x+Math.cos((54+i*72)*Math.PI/180)*(r/2),
-      y-Math.sin((54+i*72)*Math.PI/180)*(r/2)
-    );
-  }
-  ctx.closePath();
-  ctx.fill();
-}
-
-function drawHP(){
-  for(let i=0;i<maxHp;i++){
-    ctx.fillStyle = i<hp ? "red" : "#aaa";
-    ctx.fillRect(20+i*28,20,20,20);
-  }
-}
-
-function endGame(){
-  gameOver=true;
-  if(score>best) localStorage.setItem("bestScore",score);
-  ctx.fillStyle="black";
-  ctx.font="40px Arial";
-  ctx.fillText("게임 오버",canvas.width/2-90,canvas.height/2);
+  return a.x<a.x+b.size &&
+         a.x+a.w>b.x &&
+         a.y<b.y+b.size &&
+         a.y+a.h>b.y;
 }
 
 /* 루프 */
@@ -270,47 +179,12 @@ function update(){
   blocks.forEach((bl,i)=>{
     bl.x-=4;
     ctx.drawImage(blockImg,bl.x,bl.y,bl.size,bl.size);
-
-    if(hit(player,bl)){
-      blocks.splice(i,1);
-      hp--;
-      hitSound();
-      if(hp<=0) endGame();
-    }
+    if(bl.x+bl.size<0) blocks.splice(i,1);
   });
-
-  bullets.forEach((b,bi)=>{
-    blocks.forEach((bl,i)=>{
-      if(hit(b,bl)){
-        bullets.splice(bi,1);
-        blocks.splice(i,1);
-        explode(bl.x+bl.size/2, bl.y+bl.size/2, bl.color);
-        score++;
-      }
-    });
-  });
-
-  particles.forEach((p,i)=>{
-    p.x+=p.vx;
-    p.y+=p.vy;
-    p.life--;
-    drawStar(p.x,p.y,6,p.color);
-    if(p.life<=0) particles.splice(i,1);
-  });
-
-  drawHP();
-  ctx.fillStyle="black";
-  ctx.font="18px Arial";
-  ctx.fillText("점수: "+score,20,80);
-  ctx.fillText("최고: "+best,20,105);
 
   requestAnimationFrame(update);
 }
-
 update();
 </script>
 </body>
 </html>
-
-
-
