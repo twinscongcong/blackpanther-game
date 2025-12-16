@@ -9,6 +9,29 @@ initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
   body { margin:0; overflow:hidden; background:black; }
   canvas { display:block; }
+  
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: black;
+  }
+  canvas {
+    display: block;
+  }
+
+  /* 세로일 때 가로로 돌리기 */
+  @media screen and (orientation: portrait) {
+    body {
+      transform: rotate(90deg);
+      transform-origin: center center;
+      width: 100vh;
+      height: 100vw;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+  }
+
 </style>
 </head>
 
@@ -239,4 +262,5 @@ function endGame(){
 update();
 </script>
 </body>
+
 </html>
