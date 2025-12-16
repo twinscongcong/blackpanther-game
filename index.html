@@ -99,6 +99,8 @@ let bullets = [];
 let blocks = [];
 let particles = [];
 
+let startTime = Date.now();
+
 let hp = 5;
 const maxHp = 5;
 
@@ -133,26 +135,25 @@ shootBtn.ontouchstart = e=>{
 /* ======================
    블럭 생성
 ====================== */
-function spawnBlock(){
+function spawnBlock(immediate=false){
   const heights = [0, 90, 170];
   const sizes = [90, 70, 60];
   const i = Math.floor(Math.random()*3);
 
   blocks.push({
-    x: viewW + Math.random()*200 - 200,
+    x: immediate ? viewW - 120 : viewW + Math.random()*100,
     y: groundY() - heights[i],
-    size: sizes[i]
+    size: sizes[i],
+    speed: (Date.now() - startTime < 2000) ? 8 : 4
   });
 }
 
-/* ⭐ 시작 즉시 2개 */
-spawnBlock();
-spawnBlock();
+spawnBlock(true);
+setTimeout(()=>spawnBlock(true), 200);
+setTimeout(()=>spawnBlock(true), 400);
 
-/* 이후 주기적으로 */
-setInterval(spawnBlock, 1200);
-
-
+setInterval(()=>spawnBlock(false), 900);
+  
 /* ======================
    파티클 (별)
 ====================== */
@@ -236,7 +237,7 @@ function update(){
   /* 블럭 */
   for(let i=blocks.length-1;i>=0;i--){
     const bl = blocks[i];
-    bl.x -= 4;
+   bl.x -= bl.speed;
 
     if(hitPlayerBlock(player, bl)){
       blocks.splice(i,1);
@@ -279,4 +280,5 @@ update();
 </script>
 </body>
 </html>
+
 
