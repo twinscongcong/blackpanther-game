@@ -21,20 +21,7 @@ canvas {
   left: 0;
   z-index: 1;
 }
-
-/* 가로 고정 */
-function resize(){
-  const ratio = window.devicePixelRatio || 1;
-  canvas.width = window.innerWidth * ratio;
-  canvas.height = window.innerHeight * ratio;
-  canvas.style.width = window.innerWidth + "px";
-  canvas.style.height = window.innerHeight + "px";
-  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-}
-window.addEventListener("resize", resize);
-resize();
-
-/* 버튼 */
+  /* 버튼 */
 #jumpBtn, #shootBtn {
   position: fixed;
   bottom: 20px;
@@ -54,6 +41,20 @@ resize();
 
 #jumpBtn { left: 20px; }
 #shootBtn { right: 20px; }
+
+/* 가로 고정 */
+function resize(){
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = window.innerWidth * ratio;
+  canvas.height = window.innerHeight * ratio;
+  canvas.style.width = window.innerWidth + "px";
+  canvas.style.height = window.innerHeight + "px";
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+}
+window.addEventListener("resize", resize);
+resize();
+
+
 </style>
 </head>
 
@@ -310,5 +311,6 @@ update();
 </script>
 </body>
 </html>
+
 
 
