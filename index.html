@@ -55,20 +55,21 @@ canvas {
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-function resize(){
-  const dpr = window.devicePixelRatio || 1;
+let gameW = 0;
+let gameH = 0;
+let dpr = window.devicePixelRatio || 1;
 
+function resize(){
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  // ✅ 핵심: 항상 가로 게임 비율
-  const gameWidth  = Math.max(vw, vh);
-  const gameHeight = Math.min(vw, vh);
+  gameW = Math.max(vw, vh);
+  gameH = Math.min(vw, vh);
 
-  canvas.width  = gameWidth * dpr;
-  canvas.height = gameHeight * dpr;
-  canvas.style.width  = gameWidth + "px";
-  canvas.style.height = gameHeight + "px";
+  canvas.width  = gameW * dpr;
+  canvas.height = gameH * dpr;
+  canvas.style.width  = gameW + "px";
+  canvas.style.height = gameH + "px";
 
   ctx.setTransform(dpr,0,0,dpr,0,0);
 }
@@ -101,7 +102,7 @@ function shootSound(){
 
 /* 게임 변수 */
 const gravity = 0.9;
-const groundY = ()=>canvas.height/(window.devicePixelRatio||1)-120;
+const groundY = ()=>gameH - 120;
 
 const player = {
   x: 80, y: 0, w: 80, h: 80,
@@ -111,6 +112,7 @@ const player = {
 let bullets=[];
 let blocks=[];
 let hp=5;
+const maxHp=5;
 
 /* 버튼 */
 let jumpStart=0;
@@ -132,13 +134,13 @@ shootBtn.ontouchstart = e=>{
   shootSound();
 };
 
-/* 블럭 */
+/* 블럭 생성 */
 setInterval(()=>{
   const levels=[0,90,170];
   const sizes=[90,70,60];
   const i=Math.floor(Math.random()*3);
   blocks.push({
-    x: canvas.width/(window.devicePixelRatio||1),
+    x: gameW,
     y: groundY()-levels[i],
     size: sizes[i]
   });
@@ -151,12 +153,17 @@ function hit(a,b){
          a.y+a.h>b.y;
 }
 
+function drawHP(){
+  for(let i=0;i<maxHp;i++){
+    ctx.fillStyle = i<hp ? "red" : "#555";
+    ctx.fillRect(20 + i*26, 20, 20, 20);
+  }
+}
+
 /* 루프 */
 function update(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.drawImage(bgImg,0,0,
-    canvas.width/(window.devicePixelRatio||1),
-    canvas.height/(window.devicePixelRatio||1));
+  ctx.drawImage(bgImg,0,0,gameW,gameH);
 
   player.vy+=gravity;
   player.y+=player.vy;
@@ -168,25 +175,36 @@ function update(){
 
   ctx.drawImage(pantherImg,player.x,player.y,player.w,player.h);
 
-  bullets.forEach((b,i)=>{
+  for(let i=bullets.length-1;i>=0;i--){
+    const b=bullets[i];
     b.x+=10;
     ctx.fillRect(b.x,b.y,b.w,b.h);
-    if(b.x>canvas.width) bullets.splice(i,1);
-  });
+    if(b.x>gameW) bullets.splice(i,1);
+  }
 
-  blocks.forEach((bl,i)=>{
+  for(let i=blocks.length-1;i>=0;i--){
+    const bl=blocks[i];
     bl.x-=4;
     ctx.drawImage(blockImg,bl.x,bl.y,bl.size,bl.size);
+
     if(hit(player,bl)){
       blocks.splice(i,1);
       hp--;
     }
-  });
 
+    for(let j=bullets.length-1;j>=0;j--){
+      if(hit(bullets[j],bl)){
+        bullets.splice(j,1);
+        blocks.splice(i,1);
+        break;
+      }
+    }
+  }
+
+  drawHP();
   requestAnimationFrame(update);
 }
 update();
 </script>
 </body>
 </html>
-
