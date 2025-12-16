@@ -17,9 +17,7 @@ html, body {
   background: black;
 }
 
-canvas {
-  display: block;
-}
+canvas { display: block; }
 
 /* 버튼 */
 #jumpBtn, #shootBtn {
@@ -52,25 +50,24 @@ canvas {
 
 <script>
 /* ======================
-   캔버스 / 좌표계
+   캔버스 / 좌표
 ====================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let viewW = 0;
-let viewH = 0;
+let viewW = 0, viewH = 0;
 const dpr = window.devicePixelRatio || 1;
 
 function resize(){
   viewW = window.innerWidth;
   viewH = window.innerHeight;
 
-  canvas.width  = viewW * dpr;
+  canvas.width = viewW * dpr;
   canvas.height = viewH * dpr;
-  canvas.style.width  = viewW + "px";
+  canvas.style.width = viewW + "px";
   canvas.style.height = viewH + "px";
 
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
 }
 window.addEventListener("resize", resize);
 resize();
@@ -94,16 +91,14 @@ const gravity = 0.9;
 const groundY = () => viewH - 120;
 
 const player = {
-  x: 80,
-  y: 0,
-  w: 80,
-  h: 80,
-  vy: 0,
-  onGround: false
+  x: 80, y: 0, w: 80, h: 80,
+  vy: 0, onGround: false
 };
 
 let bullets = [];
 let blocks = [];
+let particles = [];
+
 let hp = 5;
 const maxHp = 5;
 
@@ -112,47 +107,80 @@ const maxHp = 5;
 ====================== */
 let jumpStart = 0;
 
-jumpBtn.addEventListener("touchstart", e=>{
+jumpBtn.ontouchstart = e=>{
   e.preventDefault();
   jumpStart = Date.now();
-});
+};
 
-jumpBtn.addEventListener("touchend", e=>{
+jumpBtn.ontouchend = e=>{
   e.preventDefault();
   if(player.onGround){
-    const t = Date.now() - jumpStart;
-    player.vy = t < 200 ? -12 : -18;
+    player.vy = (Date.now()-jumpStart < 200) ? -12 : -18;
     player.onGround = false;
   }
-});
+};
 
-shootBtn.addEventListener("touchstart", e=>{
+shootBtn.ontouchstart = e=>{
   e.preventDefault();
   bullets.push({
     x: player.x + player.w,
-    y: player.y + player.h / 2 - 3,
+    y: player.y + player.h/2 - 3,
     w: 14,
     h: 6
   });
-});
+};
 
 /* ======================
    블럭 생성
 ====================== */
-setInterval(()=>{
+function spawnBlock(){
   const heights = [0, 90, 170];
   const sizes = [90, 70, 60];
-  const i = Math.floor(Math.random() * 3);
+  const i = Math.floor(Math.random()*3);
 
   blocks.push({
     x: viewW,
     y: groundY() - heights[i],
     size: sizes[i]
   });
-}, 1400);
+}
+
+spawnBlock();                 // ✅ 시작하자마자 1개
+setInterval(spawnBlock, 1400);
 
 /* ======================
-   충돌 판정
+   파티클 (별)
+====================== */
+function explode(x, y){
+  for(let i=0;i<14;i++){
+    particles.push({
+      x, y,
+      vx: (Math.random()-0.5)*6,
+      vy: (Math.random()-0.5)*6,
+      life: 30
+    });
+  }
+}
+
+function drawStar(x,y,r){
+  ctx.fillStyle = "yellow";
+  ctx.beginPath();
+  for(let i=0;i<5;i++){
+    ctx.lineTo(
+      x + Math.cos((18+i*72)*Math.PI/180)*r,
+      y - Math.sin((18+i*72)*Math.PI/180)*r
+    );
+    ctx.lineTo(
+      x + Math.cos((54+i*72)*Math.PI/180)*(r/2),
+      y - Math.sin((54+i*72)*Math.PI/180)*(r/2)
+    );
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+/* ======================
+   충돌
 ====================== */
 function hitBulletBlock(b, bl){
   return b.x < bl.x + bl.size &&
@@ -169,43 +197,38 @@ function hitPlayerBlock(p, bl){
 }
 
 /* ======================
-   HP 표시
+   HP
 ====================== */
 function drawHP(){
   for(let i=0;i<maxHp;i++){
-    ctx.fillStyle = i < hp ? "red" : "#555";
-    ctx.fillRect(20 + i*26, 20, 20, 20);
+    ctx.fillStyle = i<hp ? "red" : "#555";
+    ctx.fillRect(20+i*26,20,20,20);
   }
 }
 
 /* ======================
-   게임 루프
+   루프
 ====================== */
 function update(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(bgImg,0,0,viewW,viewH);
 
-  /* 배경 */
-  ctx.drawImage(bgImg, 0, 0, viewW, viewH);
-
-  /* 플레이어 물리 */
+  /* 플레이어 */
   player.vy += gravity;
   player.y += player.vy;
-
   if(player.y >= groundY()){
     player.y = groundY();
     player.vy = 0;
     player.onGround = true;
   }
 
-  /* 총알 이동 */
+  /* 총알 */
   for(let i=bullets.length-1;i>=0;i--){
     bullets[i].x += 12;
-    if(bullets[i].x > viewW){
-      bullets.splice(i,1);
-    }
+    if(bullets[i].x > viewW) bullets.splice(i,1);
   }
 
-  /* 블럭 이동 + 충돌 */
+  /* 블럭 */
   for(let i=blocks.length-1;i>=0;i--){
     const bl = blocks[i];
     bl.x -= 4;
@@ -218,6 +241,7 @@ function update(){
 
     for(let j=bullets.length-1;j>=0;j--){
       if(hitBulletBlock(bullets[j], bl)){
+        explode(bl.x+bl.size/2, bl.y+bl.size/2);   // ⭐
         bullets.splice(j,1);
         blocks.splice(i,1);
         break;
@@ -225,23 +249,27 @@ function update(){
     }
   }
 
-  /* 그리기 순서 */
-  ctx.drawImage(pantherImg, player.x, player.y, player.w, player.h);
+  /* 파티클 */
+  for(let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.2;
+    p.life--;
+    drawStar(p.x,p.y,6);
+    if(p.life<=0) particles.splice(i,1);
+  }
 
-  ctx.fillStyle = "yellow";
-  bullets.forEach(b=>{
-    ctx.fillRect(b.x, b.y, b.w, b.h);
-  });
+  /* 그리기 */
+  ctx.drawImage(pantherImg,player.x,player.y,player.w,player.h);
 
-  blocks.forEach(bl=>{
-    ctx.drawImage(blockImg, bl.x, bl.y, bl.size, bl.size);
-  });
+  ctx.fillStyle="yellow";
+  bullets.forEach(b=>ctx.fillRect(b.x,b.y,b.w,b.h));
+  blocks.forEach(bl=>ctx.drawImage(blockImg,bl.x,bl.y,bl.size,bl.size));
 
   drawHP();
-
   requestAnimationFrame(update);
 }
-
 update();
 </script>
 </body>
