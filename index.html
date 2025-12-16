@@ -11,24 +11,23 @@ content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable
 html, body {
   margin: 0;
   padding: 0;
+  background: black;
+  overflow: hidden;
   width: 100%;
   height: 100%;
-  overflow: hidden;
-  background: black;
 }
 
-#game {
+canvas {
   display: block;
-  width: 100vw;
-  height: 100vh;
+  margin: auto;
 }
 
 /* 버튼 */
 #jumpBtn, #shootBtn {
-  position: absolute;
+  position: fixed;
   bottom: 20px;
-  width: 120px;
-  height: 120px;
+  width: 110px;
+  height: 110px;
   border-radius: 50%;
   background: rgba(0,0,0,0.5);
   color: white;
@@ -56,15 +55,22 @@ html, body {
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-/* ✅ 모든 기기 안전한 리사이즈 */
 function resize(){
   const dpr = window.devicePixelRatio || 1;
-  const w = Math.floor(document.documentElement.clientWidth);
-  const h = Math.floor(document.documentElement.clientHeight);
 
-  canvas.width = w * dpr;
-  canvas.height = h * dpr;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // ✅ 핵심: 항상 가로 게임 비율
+  const gameWidth  = Math.max(vw, vh);
+  const gameHeight = Math.min(vw, vh);
+
+  canvas.width  = gameWidth * dpr;
+  canvas.height = gameHeight * dpr;
+  canvas.style.width  = gameWidth + "px";
+  canvas.style.height = gameHeight + "px";
+
+  ctx.setTransform(dpr,0,0,dpr,0,0);
 }
 window.addEventListener("resize", resize);
 resize();
@@ -95,49 +101,46 @@ function shootSound(){
 
 /* 게임 변수 */
 const gravity = 0.9;
-const groundY = ()=>canvas.height/dpr - 120;
-let dpr = window.devicePixelRatio || 1;
+const groundY = ()=>canvas.height/(window.devicePixelRatio||1)-120;
 
 const player = {
   x: 80, y: 0, w: 80, h: 80,
   vy: 0, onGround: false
 };
 
-let bullets=[], blocks=[];
+let bullets=[];
+let blocks=[];
 let hp=5;
 
 /* 버튼 */
-const jumpBtn = document.getElementById("jumpBtn");
-const shootBtn = document.getElementById("shootBtn");
-let jumpTime=0;
-
-jumpBtn.addEventListener("touchstart", e=>{
+let jumpStart=0;
+jumpBtn.ontouchstart = e=>{
   e.preventDefault();
-  jumpTime=Date.now();
-});
-jumpBtn.addEventListener("touchend", e=>{
+  jumpStart=Date.now();
+};
+jumpBtn.ontouchend = e=>{
   e.preventDefault();
   if(player.onGround){
-    player.vy = (Date.now()-jumpTime<200)?-12:-18;
+    player.vy = (Date.now()-jumpStart<200)?-12:-18;
     player.onGround=false;
   }
-});
+};
 
-shootBtn.addEventListener("touchstart", e=>{
+shootBtn.ontouchstart = e=>{
   e.preventDefault();
   bullets.push({x:player.x+player.w,y:player.y+40,w:10,h:4});
   shootSound();
-});
+};
 
 /* 블럭 */
 setInterval(()=>{
   const levels=[0,90,170];
-  const s=[90,70,60];
+  const sizes=[90,70,60];
   const i=Math.floor(Math.random()*3);
   blocks.push({
-    x: canvas.width/dpr,
+    x: canvas.width/(window.devicePixelRatio||1),
     y: groundY()-levels[i],
-    size: s[i]
+    size: sizes[i]
   });
 },1500);
 
@@ -151,7 +154,9 @@ function hit(a,b){
 /* 루프 */
 function update(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.drawImage(bgImg,0,0,canvas.width/dpr,canvas.height/dpr);
+  ctx.drawImage(bgImg,0,0,
+    canvas.width/(window.devicePixelRatio||1),
+    canvas.height/(window.devicePixelRatio||1));
 
   player.vy+=gravity;
   player.y+=player.vy;
@@ -166,7 +171,7 @@ function update(){
   bullets.forEach((b,i)=>{
     b.x+=10;
     ctx.fillRect(b.x,b.y,b.w,b.h);
-    if(b.x>canvas.width/dpr) bullets.splice(i,1);
+    if(b.x>canvas.width) bullets.splice(i,1);
   });
 
   blocks.forEach((bl,i)=>{
@@ -184,3 +189,4 @@ update();
 </script>
 </body>
 </html>
+
