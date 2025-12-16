@@ -139,14 +139,19 @@ function spawnBlock(){
   const i = Math.floor(Math.random()*3);
 
   blocks.push({
-    x: viewW,
+    x: viewW + Math.random()*200 - 200,
     y: groundY() - heights[i],
     size: sizes[i]
   });
 }
 
-spawnBlock();                 // ✅ 시작하자마자 1개
-setInterval(spawnBlock, 1400);
+/* ⭐ 시작 즉시 2개 */
+spawnBlock();
+spawnBlock();
+
+/* 이후 주기적으로 */
+setInterval(spawnBlock, 1200);
+
 
 /* ======================
    파티클 (별)
@@ -274,3 +279,4 @@ update();
 </script>
 </body>
 </html>
+
